@@ -1,0 +1,10 @@
+name: WorldExist
+version: '1.0.0'
+main: com.icegamer7810.WorldExistPlugin
+api-version: '1.21.11'
+authors:
+  - Codex
+  - IceGamer7810
+description: Checks whether a world exists on Paper or in Multiverse-Core.
+softdepend:
+  - Multiverse-Core
