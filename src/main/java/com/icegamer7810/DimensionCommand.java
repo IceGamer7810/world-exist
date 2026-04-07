@@ -1,40 +1,54 @@
 package com.icegamer7810;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.LiteralMessage;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
-import io.papermc.paper.command.brigadier.argument.resolvers.selector.EntitySelectorArgumentResolver;
+import java.util.List;
+import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 
 public final class DimensionCommand {
+    private static final String PASS_KEY = "commands.execute.conditional.pass";
+    private static final String FAIL_KEY = "commands.execute.conditional.fail";
+    private static final SimpleCommandExceptionType NO_ENTITY_FOUND = new SimpleCommandExceptionType(new LiteralMessage("No entity was found"));
+
     private DimensionCommand() {
     }
 
     public static LiteralCommandNode<CommandSourceStack> create(final WorldExistenceService worldExistenceService) {
         return Commands.literal("dimension")
             .then(Commands.literal("check")
-                .then(Commands.argument("target", ArgumentTypes.entity())
+                .then(Commands.argument("input", StringArgumentType.greedyString())
                     .executes(context -> {
-                        final EntitySelectorArgumentResolver resolver = context.getArgument("target", EntitySelectorArgumentResolver.class);
-                        final Entity entity = resolver.resolve(context.getSource()).getFirst();
-                        final String worldName = entity.getWorld().getName();
-                        return reply(context.getSource().getSender(), worldExistenceService.exists(worldName));
-                    }))
-                .then(Commands.argument("name", StringArgumentType.string())
-                    .executes(context -> {
-                        final String worldName = StringArgumentType.getString(context, "name");
+                        final String input = StringArgumentType.getString(context, "input");
+                        final String worldName = resolveWorldName(context.getSource().getSender(), input);
                         return reply(context.getSource().getSender(), worldExistenceService.exists(worldName));
                     })))
             .build();
     }
 
+    private static String resolveWorldName(final CommandSender sender, final String input) throws CommandSyntaxException {
+        if (!input.startsWith("@")) {
+            return input;
+        }
+
+        final List<Entity> entities = sender.getServer().selectEntities(sender, input);
+        if (entities.isEmpty()) {
+            throw NO_ENTITY_FOUND.create();
+        }
+
+        return entities.getFirst().getWorld().getName();
+    }
+
     private static int reply(final CommandSender sender, final boolean exists) {
         final int result = exists ? Command.SINGLE_SUCCESS : 0;
-        sender.sendPlainMessage(Integer.toString(result));
+        sender.sendMessage(Component.translatable(exists ? PASS_KEY : FAIL_KEY));
         return result;
     }
 }
