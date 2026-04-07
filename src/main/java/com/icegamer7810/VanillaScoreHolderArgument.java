@@ -1,44 +1,28 @@
 package com.icegamer7810;
 
-import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.arguments.ArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
-public final class VanillaScoreHolderArgument implements CustomArgumentType<String, Object> {
-    public static final VanillaScoreHolderArgument INSTANCE = new VanillaScoreHolderArgument();
-
-    private final ArgumentType nativeType;
+public final class VanillaScoreHolderArgument {
+    private static final ArgumentType NATIVE_TYPE = createNativeType();
 
     private VanillaScoreHolderArgument() {
+    }
+
+    public static ArgumentType<Object> nativeType() {
+        return NATIVE_TYPE;
+    }
+
+    private static ArgumentType createNativeType() {
         try {
             final Class<?> scoreHolderArgumentClass = Class.forName("net.minecraft.commands.arguments.ScoreHolderArgument");
             final Method factoryMethod = findFactoryMethod(scoreHolderArgumentClass);
-            this.nativeType = (ArgumentType) invokeFactory(factoryMethod);
+            return (ArgumentType) invokeFactory(factoryMethod);
         } catch (final ReflectiveOperationException exception) {
             throw new IllegalStateException("Failed to initialize vanilla ScoreHolderArgument bridge", exception);
         }
-    }
-
-    @Override
-    public String parse(final StringReader reader) throws CommandSyntaxException {
-        final int start = reader.getCursor();
-        this.nativeType.parse(reader);
-        return reader.getString().substring(start, reader.getCursor());
-    }
-
-    @Override
-    public <S> String parse(final StringReader reader, final S source) throws CommandSyntaxException {
-        return this.parse(reader);
-    }
-
-    @Override
-    public ArgumentType<Object> getNativeType() {
-        return this.nativeType;
     }
 
     private static Method findFactoryMethod(final Class<?> scoreHolderArgumentClass) throws NoSuchMethodException {
@@ -65,6 +49,6 @@ public final class VanillaScoreHolderArgument implements CustomArgumentType<Stri
             return factoryMethod.invoke(null);
         }
 
-        return factoryMethod.invoke(null, true);
+        return factoryMethod.invoke(null, false);
     }
 }
